@@ -1,0 +1,924 @@
+<title>Lautstärke-Eule</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800;900&display=swap">
+<style>
+/* Layout: eine Bildschirmseite. Oben Eule, Sprechblase und Verwarnungs-Lampen, in der Mitte die riesige dB-Zahl,
+   darunter der Pegelbalken mit Grenze, unten die Bedienung. Die Farbe der Zahl ist die Ampel. */
+:root{
+  --ink:#0e1322; --ink-2:#172038; --ink-3:#222c4a; --line:#34416b;
+  --paper:#f1f3fb; --muted:#99a3c6;
+  --calm:#3ddc97; --warm:#ffc43d; --hot:#ff4f4f; --hot-deep:#9b1020; --stop-bg:#24070e;
+  --owl:#b98a5e; --owl-dark:#6b4629; --owl-face:#f3e0c6; --beak:#f59e2b;
+  --zone:var(--muted);
+  --octa:polygon(29.3% 0,70.7% 0,100% 29.3%,100% 70.7%,70.7% 100%,29.3% 100%,0 70.7%,0 29.3%);
+  --f-display:"Lilita One","Arial Rounded MT Bold","Trebuchet MS",sans-serif;
+  --f-body:"Nunito","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+html{height:100%;box-sizing:border-box}
+*,*::before,*::after{box-sizing:inherit}
+body{height:100%;margin:0;background:var(--ink);color:var(--paper);font-family:var(--f-body);font-weight:600;font-size:16px;overflow:hidden;-webkit-tap-highlight-color:transparent}
+button,input,select{font:inherit;color:inherit}
+
+#app{position:relative;height:100%;max-width:1400px;margin:0 auto;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:clamp(8px,1.6vh,16px);padding-block:clamp(10px,2vh,20px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#app[data-zone="ok"]{--zone:var(--calm)}
+#app[data-zone="loud"]{--zone:var(--warm)}
+#app[data-zone="over"]{--zone:var(--hot)}
+.glow{position:absolute;left:8%;right:8%;top:22%;bottom:22%;border-radius:50%;background:var(--zone);filter:blur(90px);opacity:.16;pointer-events:none;transition:background-color .5s;z-index:0}
+
+/* Kopf */
+.top{position:relative;z-index:1;display:flex;align-items:center;gap:clamp(10px,2vw,20px);flex-wrap:wrap}
+.owl{width:clamp(58px,10vh,104px);height:auto;flex:none;overflow:visible;transform-origin:50% 90%}
+.bubble{flex:1 1 180px;min-width:0;position:relative;background:var(--ink-2);border:2px solid var(--zone);border-radius:18px;padding:8px 14px;transition:border-color .4s}
+.bubble::before{content:"";position:absolute;left:-9px;top:50%;width:14px;height:14px;background:var(--ink-2);border-left:2px solid var(--zone);border-bottom:2px solid var(--zone);transform:translateY(-50%) rotate(45deg);transition:border-color .4s}
+.bubble-title{font-family:var(--f-display);font-size:clamp(20px,3.4vh,34px);line-height:1.1;color:var(--zone);transition:color .4s;text-wrap:balance}
+.bubble-sub{font-size:clamp(14px,2vh,18px);opacity:.88;margin-top:2px;text-wrap:pretty}
+.cards{flex:none;margin-left:auto;display:flex;flex-direction:column;align-items:center;gap:4px}
+.cards-label{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.lamps{display:flex;gap:8px}
+.lamp{width:clamp(38px,6vh,56px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-size:clamp(16px,2.6vh,24px);color:var(--muted);border:3px solid var(--line);background:var(--ink-2)}
+.lamp.last:not(.on){border-color:color-mix(in srgb,var(--hot) 45%,var(--line))}
+.lamp.on{background:var(--hot);border-color:var(--hot);color:var(--paper);box-shadow:0 0 18px color-mix(in srgb,var(--hot) 70%,transparent);animation:pop .5s ease-out}
+@keyframes pop{0%{transform:scale(.4)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+
+/* Eule */
+.owl-body{fill:var(--owl)}
+.owl-belly,.owl-face{fill:var(--owl-face)}
+.owl-marks{fill:none;stroke:var(--owl);stroke-width:2.5;stroke-linecap:round}
+.eye-white,.shine{fill:var(--paper)}
+.pupil{fill:var(--ink);transform-box:fill-box;transform-origin:center;transition:transform .3s}
+.lid{fill:var(--owl);transform-box:fill-box;transform-origin:50% 0;transform:scaleY(0);animation:blink 5.5s infinite}
+.brow{fill:none;stroke:var(--owl-dark);stroke-width:5;stroke-linecap:round;transform-box:fill-box;transform-origin:center;transition:transform .3s}
+.beak{fill:var(--beak)}
+@keyframes blink{0%,93%,100%{transform:scaleY(0)}96%{transform:scaleY(1)}}
+#app[data-zone="idle"] .lid{animation:none;transform:scaleY(1)}
+#app[data-zone="loud"] .brow{transform:translateY(-6px)}
+#app[data-zone="loud"] .pupil{transform:scale(1.3)}
+#app[data-zone="over"] .brow-l,#app.alarm .brow-l{transform:translateY(3px) rotate(20deg)}
+#app[data-zone="over"] .brow-r,#app.alarm .brow-r{transform:translateY(3px) rotate(-20deg)}
+#app[data-zone="over"] .pupil,#app.alarm .pupil{transform:scale(.7)}
+#app[data-zone="over"] .owl{animation:shake .4s infinite}
+@keyframes shake{25%{transform:rotate(-4deg)}75%{transform:rotate(4deg)}}
+
+/* Zahl */
+.stage{position:relative;z-index:1;container-type:size;display:grid;place-items:center;min-height:0}
+.num{display:flex;align-items:baseline;font-family:var(--f-display);font-size:30vmin;font-size:min(44cqw,92cqh);line-height:.82;color:var(--zone);text-shadow:0 0 .12em color-mix(in srgb,var(--zone) 45%,transparent);transition:color .3s}
+.digits{display:flex}
+.digits span{display:inline-block;width:.6em;text-align:center}
+.unit{font-family:var(--f-body);font-weight:900;font-size:.16em;color:var(--muted);margin-left:.15em;text-shadow:none}
+
+/* Pegel */
+.meter-wrap{position:relative;z-index:1;display:grid;gap:6px;padding-top:22px}
+.meter{position:relative;height:clamp(22px,3.6vh,36px)}
+.meter-clip{position:absolute;inset:0;border-radius:999px;overflow:hidden;background:var(--ink-2);border:2px solid var(--line)}
+.meter-fill{height:100%;width:0;background:var(--zone);transition:width .12s linear,background-color .3s}
+.mark{position:absolute;top:-6px;bottom:-6px;width:4px;margin-left:-2px;border-radius:2px}
+.mark.limit{background:var(--paper)}
+.mark.warn{background:var(--warm);opacity:.75;width:3px}
+.mark-label{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);white-space:nowrap;font-size:13px;font-weight:800}
+.ticks{position:relative;height:16px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ticks span{position:absolute;transform:translateX(-50%)}
+.ticks span:first-child{transform:none}
+.ticks span:last-child{transform:translateX(-100%)}
+.fuse{display:flex;align-items:center;gap:10px}
+.fuse-label{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.fuse-track{flex:1;height:8px;border-radius:99px;background:var(--ink-2);overflow:hidden}
+.fuse-fill{height:100%;background:var(--hot);transform:scaleX(0);transform-origin:left;transition:transform .12s linear}
+.rule-line{margin:0;font-size:13px;color:var(--muted);text-align:center;text-wrap:balance}
+
+/* Bedienung */
+.bottom{position:relative;z-index:1;display:grid;gap:10px}
+.demo{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--ink-2);border:2px dashed var(--line);border-radius:14px;padding:8px 14px}
+.demo label{font-weight:800;font-size:14px}
+.demo input{flex:1 1 200px;accent-color:var(--zone)}
+.bar{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.btn{appearance:none;border:2px solid var(--line);background:var(--ink-2);color:var(--paper);border-radius:14px;padding:11px 18px;font-weight:800;font-size:16px;line-height:1.2;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.btn small{font-weight:600;font-size:12px;color:var(--muted)}
+.btn:hover{border-color:var(--muted)}
+.btn:focus-visible{outline:3px solid var(--warm);outline-offset:2px}
+.btn.primary{background:var(--calm);border-color:var(--calm);color:var(--ink)}
+.btn.big{font-size:20px;padding:16px 22px;width:100%}
+.btn.ghost{background:transparent;width:100%}
+.hold{position:relative;overflow:hidden}
+.hold::after{content:"";position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--warm);transform:scaleX(0);transform-origin:left}
+.hold.holding::after{transform:scaleX(1);transition:transform var(--hold,1s) linear}
+
+/* Überlagerungen */
+.overlay{position:fixed;inset:0;display:grid;place-items:center;overflow:auto;padding-top:max(16px,env(safe-area-inset-top,0px));padding-bottom:max(16px,env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.start{z-index:35;background:color-mix(in srgb,var(--ink) 78%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.card{width:100%;max-width:520px;background:var(--ink-2);border:2px solid var(--line);border-radius:24px;padding:clamp(18px,4vw,28px);display:grid;gap:14px}
+.card h1,.card h2{margin:0;font-family:var(--f-display);font-weight:400;line-height:1}
+.card h1{font-size:clamp(32px,7vw,46px)}
+.card h2{font-size:30px}
+.lead{margin:0;font-size:17px}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.steps li{display:flex;gap:10px;align-items:baseline;font-size:15px}
+.dot{flex:none;width:14px;height:14px;border-radius:50%;transform:translateY(2px)}
+.dot.calm{background:var(--calm)}.dot.warm{background:var(--warm)}.dot.hot{background:var(--hot)}
+.dot.stop{background:var(--hot);border-radius:0;clip-path:var(--octa)}
+.note{margin:0;padding:10px 12px;border-radius:12px;font-size:14px;background:var(--ink-3)}
+.err{background:color-mix(in srgb,var(--hot) 18%,var(--ink-2));border:1px solid var(--hot)}
+.err a{color:var(--warm);font-weight:800;word-break:break-all}
+.fine{margin:0;font-size:13px;color:var(--muted)}
+
+.flash{z-index:60;background:var(--hot);color:var(--paper);text-align:center;animation:blink-bg .5s steps(1) infinite}
+@keyframes blink-bg{50%{background:var(--hot-deep)}}
+.flash-inner{display:grid;justify-items:center;gap:8px}
+.flash-num{font-family:var(--f-display);font-size:min(46vw,46vh);line-height:.8}
+.flash-word{font-family:var(--f-display);font-size:min(13vw,10vh);line-height:1;text-transform:uppercase;letter-spacing:.04em}
+.flash-text{max-width:32ch;font-size:clamp(16px,2.6vh,22px);font-weight:800;text-wrap:balance}
+
+.ban{z-index:30;text-align:center;background:radial-gradient(ellipse at 50% 30%,color-mix(in srgb,var(--hot) 22%,var(--stop-bg)),var(--stop-bg) 70%)}
+.ban-inner{display:grid;justify-items:center;gap:clamp(8px,1.8vh,16px);width:100%;max-width:640px}
+.octa{--s:min(40vw,24vh);width:var(--s);height:var(--s);background:var(--paper);clip-path:var(--octa);display:grid;place-items:center}
+.octa-in{width:91%;height:91%;background:var(--hot);clip-path:var(--octa);display:grid;place-items:center;font-family:var(--f-display);font-size:calc(var(--s) * .25);color:var(--paper)}
+.ban-title{font-family:var(--f-display);font-size:clamp(28px,6vh,56px);line-height:1}
+.ban-clock{font-family:var(--f-display);font-size:min(24vw,15vh);line-height:.9;display:flex}
+.ban-clock .d{display:inline-block;width:.6em;text-align:center}
+.ban-clock .c{display:inline-block;width:.3em;text-align:center}
+.ban-state{font-weight:900;font-size:clamp(15px,2.3vh,20px);padding:6px 14px;border-radius:99px;background:var(--calm);color:var(--ink)}
+.ban-state.stalled{background:var(--hot);color:var(--paper)}
+.ban-state.idle{background:var(--ink-3);color:var(--paper)}
+.ban-track{width:min(100%,460px);height:10px;border-radius:99px;background:color-mix(in srgb,var(--paper) 15%,transparent);overflow:hidden}
+.ban-fill{height:100%;background:var(--calm);transform-origin:left;transform:scaleX(0);transition:transform .3s linear}
+.ban-rule{margin:0;font-size:clamp(15px,2.2vh,19px);max-width:34ch;text-wrap:balance}
+.ban-rule b{font-family:var(--f-display);font-weight:400;font-size:1.4em;color:var(--zone)}
+
+.sheet{z-index:50;place-items:start center;background:color-mix(in srgb,var(--ink) 82%,transparent);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.sheet .card{max-width:560px}
+.field{display:grid;gap:4px}
+.field-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.field label{font-weight:800}
+.field output{font-family:var(--f-display);font-size:20px;color:var(--warm);white-space:nowrap}
+.field .hint{font-size:13px;color:var(--muted)}
+.field input[type=range]{width:100%;accent-color:var(--calm)}
+.field select,.field input[type=text]{width:100%;background:var(--ink-3);border:2px solid var(--line);border-radius:10px;padding:8px 10px}
+.check{display:flex;gap:10px;align-items:center;font-weight:800}
+.check input{width:22px;height:22px;accent-color:var(--calm)}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.sep{height:1px;background:var(--line)}
+
+@media (prefers-reduced-motion:reduce){
+  .lid,.flash,#app[data-zone="over"] .owl,.lamp.on{animation:none}
+}
+</style>
+
+<div id="app" data-zone="idle">
+  <div class="glow" aria-hidden="true"></div>
+
+  <header class="top">
+    <svg class="owl" viewBox="0 0 120 120" aria-hidden="true">
+      <path class="owl-body" d="M22 32 L32 8 L47 24 Q60 19 73 24 L88 8 L98 32 Q108 52 104 78 Q98 113 60 115 Q22 113 16 78 Q12 52 22 32 Z"/>
+      <ellipse class="owl-belly" cx="60" cy="90" rx="25" ry="19"/>
+      <path class="owl-marks" d="M49 86 q4 4 8 0 M63 86 q4 4 8 0 M56 95 q4 4 8 0"/>
+      <circle class="owl-face" cx="42" cy="54" r="20"/>
+      <circle class="owl-face" cx="78" cy="54" r="20"/>
+      <circle class="eye-white" cx="42" cy="54" r="13"/>
+      <circle class="pupil" cx="42" cy="55" r="6.5"/>
+      <circle class="shine" cx="45" cy="51" r="2"/>
+      <rect class="lid" x="28.5" y="40.5" width="27" height="27" rx="13.5"/>
+      <circle class="eye-white" cx="78" cy="54" r="13"/>
+      <circle class="pupil" cx="78" cy="55" r="6.5"/>
+      <circle class="shine" cx="81" cy="51" r="2"/>
+      <rect class="lid" x="64.5" y="40.5" width="27" height="27" rx="13.5"/>
+      <path class="brow brow-l" d="M29 35 Q41 29 53 35"/>
+      <path class="brow brow-r" d="M67 35 Q79 29 91 35"/>
+      <path class="beak" d="M54 64 L66 64 L60 76 Z"/>
+    </svg>
+    <div class="bubble" aria-live="polite">
+      <div class="bubble-title" id="bubbleTitle">Die Eule schläft</div>
+      <div class="bubble-sub" id="bubbleSub">Tippe auf Start, dann hört sie zu.</div>
+    </div>
+    <div class="cards">
+      <div class="cards-label">Verwarnungen</div>
+      <div class="lamps" id="lamps"></div>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="num" aria-hidden="true"><span class="digits" id="digits"><span>-</span><span>-</span></span><span class="unit">dB</span></div>
+  </main>
+
+  <section class="meter-wrap" aria-label="Pegel">
+    <div class="meter">
+      <div class="meter-clip"><div class="meter-fill" id="meterFill"></div></div>
+      <div class="mark warn" id="markWarn"></div>
+      <div class="mark limit" id="markLimit"><span class="mark-label" id="markLimitLabel">Grenze</span></div>
+    </div>
+    <div class="ticks" id="ticks"></div>
+    <div class="fuse">
+      <span class="fuse-label">Bis zur Verwarnung</span>
+      <div class="fuse-track"><div class="fuse-fill" id="fuseFill"></div></div>
+    </div>
+    <p class="rule-line" id="ruleLine"></p>
+  </section>
+
+  <div class="bottom">
+    <div class="demo" id="demoRow" hidden>
+      <label for="simDb">Probelauf: Lautstärke simulieren</label>
+      <input type="range" id="simDb" min="30" max="100" value="50">
+    </div>
+    <div class="bar">
+      <button type="button" class="btn hold" id="btnStop" hidden>Beenden <small>halten</small></button>
+      <button type="button" class="btn" id="btnFull">Vollbild</button>
+      <button type="button" class="btn hold" id="btnSettings">Einstellungen <small>halten</small></button>
+    </div>
+  </div>
+
+  <section class="overlay start" id="startOverlay" aria-labelledby="startTitle">
+    <div class="card">
+      <h1 id="startTitle">Lautstärke-Eule</h1>
+      <p class="lead">Die Eule hört, wie laut es im Zimmer ist, und zeigt es als große Zahl.</p>
+      <ul class="steps" id="steps"></ul>
+      <p class="note" id="startNote" hidden></p>
+      <button type="button" class="btn primary big" id="btnStart">Mikrofon an und los</button>
+      <button type="button" class="btn ghost" id="btnDemo">Probelauf ohne Mikrofon</button>
+      <p class="note err" id="micError" hidden></p>
+      <p class="fine">Lautsprecher laut stellen. Das Mikrofon misst nur die Lautstärke, es wird nichts aufgenommen oder gespeichert. Der Bildschirm bleibt an, solange die Eule zuhört.</p>
+    </div>
+  </section>
+
+  <section class="overlay ban" id="ban" hidden aria-live="assertive">
+    <div class="ban-inner">
+      <div class="octa"><div class="octa-in">STOPP</div></div>
+      <div class="ban-title">Spielen verboten</div>
+      <div class="ban-clock" id="banClock"></div>
+      <div class="ban-state idle" id="banState">Wartet auf Start</div>
+      <div class="ban-track"><div class="ban-fill" id="banFill"></div></div>
+      <p class="ban-rule">Die Zeit läuft nur, wenn die Zahl grün ist. Gerade: <b id="banDb">--</b> dB</p>
+      <button type="button" class="btn hold" id="btnRelease">Spielen wieder erlauben <small>halten</small></button>
+    </div>
+  </section>
+
+  <section class="overlay flash" id="flash" hidden aria-live="assertive">
+    <div class="flash-inner">
+      <div class="flash-num" id="flashNum">1.</div>
+      <div class="flash-word" id="flashWord">Verwarnung</div>
+      <div class="flash-text" id="flashText"></div>
+    </div>
+  </section>
+
+  <section class="overlay sheet" id="settings" hidden aria-labelledby="setTitle">
+    <form class="card" id="setForm">
+      <h2 id="setTitle">Einstellungen</h2>
+      <div class="field">
+        <div class="field-head"><label for="s_limit">Grenze</label><output id="s_limit_out"></output></div>
+        <input type="range" id="s_limit" min="45" max="100" step="1">
+        <div class="hint">Darüber wird es rot. Gerade gemessen: <b id="s_now">--</b> dB</div>
+      </div>
+      <div class="field">
+        <div class="field-head"><label for="s_tol">Zu laut, bis es eine Verwarnung gibt</label><output id="s_tol_out"></output></div>
+        <input type="range" id="s_tol" min="1" max="10" step="0.5">
+        <div class="hint">Kurzes Kreischen oder Lachen zählt nicht, nur länger anhaltender Lärm.</div>
+      </div>
+      <div class="field">
+        <div class="field-head"><label for="s_max">Verwarnungen bis Spielverbot</label><output id="s_max_out"></output></div>
+        <input type="range" id="s_max" min="1" max="5" step="1">
+      </div>
+      <div class="field">
+        <div class="field-head"><label for="s_pause">Länge der Spielpause</label><output id="s_pause_out"></output></div>
+        <input type="range" id="s_pause" min="1" max="20" step="1">
+        <div class="hint">Die Pausenzeit läuft nur, solange es ruhig ist.</div>
+      </div>
+      <div class="field">
+        <div class="field-head"><label for="s_forgive">Eine Verwarnung verfällt nach</label><output id="s_forgive_out"></output></div>
+        <input type="range" id="s_forgive" min="0" max="30" step="1">
+        <div class="hint">Zeit ohne neue Verwarnung. Die Eule lobt dann und löscht eine.</div>
+      </div>
+      <div class="sep"></div>
+      <div class="field">
+        <label for="s_alarm">Alarm</label>
+        <select id="s_alarm">
+          <option value="siren">Sirene (sehr laut)</option>
+          <option value="gong">Gong (sanfter)</option>
+          <option value="off">kein Alarmton, nur Ansage</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="field-head"><label for="s_vol">Alarm-Lautstärke</label><output id="s_vol_out"></output></div>
+        <input type="range" id="s_vol" min="0.1" max="1" step="0.05">
+        <div class="hint">Zusätzlich die Lautstärke am Gerät ganz hoch stellen.</div>
+      </div>
+      <label class="check"><input type="checkbox" id="s_voice"> Ansagen sprechen</label>
+      <label class="check"><input type="checkbox" id="s_praise"> Lob, wenn es lange schön leise war</label>
+      <div class="field">
+        <label for="s_name">Anrede in den Ansagen</label>
+        <input type="text" id="s_name" maxlength="40" autocomplete="off">
+        <div class="hint">Zum Beispiel „Kinder“ oder „Lisa und Max“.</div>
+      </div>
+      <div class="field">
+        <div class="field-head"><label for="s_offset">Anzeige korrigieren</label><output id="s_offset_out"></output></div>
+        <input type="range" id="s_offset" min="-20" max="20" step="1">
+        <div class="hint">Handy- und Laptop-Mikrofone messen unterschiedlich. Mit einer Schallpegel-App vergleichen und hier angleichen.</div>
+      </div>
+      <div class="row">
+        <button type="button" class="btn" id="t_alarm">Alarm testen</button>
+        <button type="button" class="btn" id="t_voice">Ansage testen</button>
+        <button type="button" class="btn" id="t_reset">Verwarnungen löschen</button>
+      </div>
+      <button type="submit" class="btn primary big">Fertig</button>
+    </form>
+  </section>
+</div>
+
+<script>
+(() => {
+'use strict';
+document.documentElement.lang = 'de';
+
+// Eigener Link der App, unter dem das Mikrofon funktioniert (leer = keiner).
+const APP_URL = 'https://unitechnics-kj.github.io/lautstaerke-eule/';
+
+const KEY_CFG = 'lautstaerke-eule.einstellungen';
+const KEY_STATE = 'lautstaerke-eule.stand';
+const DEFAULTS = { limit: 72, tolerance: 3, maxWarn: 3, pauseMin: 5, forgiveMin: 10, alarm: 'siren', alarmVol: 0.9, voice: true, praise: true, offset: 0, name: 'Kinder' };
+const BASE = 100;            // dBFS + BASE ≈ dB im Raum, Feinabgleich über „Anzeige korrigieren“
+const YELLOW = 6;            // gelb ab Grenze − 6 dB
+const SCALE = [30, 100];
+const GRACE = 15;            // Sekunden nach einer Verwarnung zum Leiserwerden
+const HINT_GAP = 30, STALL_GAP = 25, PRAISE_GAP = 15 * 60;
+const ORD = ['', 'erste', 'zweite', 'dritte', 'vierte', 'fünfte'];
+
+const $ = id => document.getElementById(id);
+const app = $('app');
+const now = () => performance.now() / 1000;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const pct = db => clamp((db - SCALE[0]) / (SCALE[1] - SCALE[0]) * 100, 0, 100);
+const fmtS = v => String(v).replace('.', ',') + ' s';
+const minutes = n => n === 1 ? 'eine Minute' : n + ' Minuten';
+
+function load(key, def) {
+  try {
+    const v = JSON.parse(localStorage.getItem(key));
+    return Object.assign({}, def, v && typeof v === 'object' ? v : {});
+  } catch (e) { return Object.assign({}, def); }
+}
+function store(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} }
+
+const cfg = load(KEY_CFG, DEFAULTS);
+for (const k of Object.keys(DEFAULTS)) {
+  if (typeof DEFAULTS[k] === 'number') cfg[k] = Number.isFinite(+cfg[k]) ? +cfg[k] : DEFAULTS[k];
+}
+if (typeof cfg.name !== 'string') cfg.name = DEFAULTS.name;
+const A = () => cfg.name.trim() || 'Kinder';
+
+const saved = load(KEY_STATE, { warnings: 0, banLeft: 0, banTotal: 0 });
+const S = {
+  running: false, demo: false,
+  ctx: null, analyser: null, stream: null, buf: null, timer: null, wake: null,
+  power: 0, db: null, simDb: 50,
+  loud: 0,                                   // Sekunden „zu laut“ auf dem Konto
+  warnings: clamp(saved.warnings | 0, 0, cfg.maxWarn - 1),
+  ban: saved.banLeft > 0 ? { left: saved.banLeft, total: saved.banTotal || saved.banLeft, half: true } : null,
+  pending: 0, muteUntil: 0, bubbleUntil: 0, graceUntil: 0,
+  lastTick: 0, lastNum: 0, lastWarnAt: 0, lastHintAt: -1e9, lastStallAt: -1e9, lastPraiseAt: 0, lastPersist: 0,
+  lastDigits: '', lastClock: '', settingsOpen: false
+};
+if (S.ban) S.warnings = cfg.maxWarn;
+
+function persist() {
+  store(KEY_STATE, { warnings: S.warnings, banLeft: S.ban ? Math.max(0, Math.round(S.ban.left)) : 0, banTotal: S.ban ? S.ban.total : 0 });
+}
+
+/* ---------- Anzeige ---------- */
+
+const ZONE_MSG = {
+  idle: ['Die Eule schläft', 'Tippe auf Start, dann hört sie zu.'],
+  ok:   ['Alles gut!', 'Schön so. Spielt weiter.'],
+  loud: ['Es wird lauter', 'Ein bisschen leiser, dann bleibt die Zahl grün.'],
+  over: ['Zu laut!', 'Leiser werden, sonst gibt es eine Verwarnung.']
+};
+
+function setBubble(title, sub) {
+  $('bubbleTitle').textContent = title;
+  $('bubbleSub').textContent = sub;
+}
+
+function setDigits(str) {
+  if (str === S.lastDigits) return;
+  S.lastDigits = str;
+  $('digits').innerHTML = [...str].map(c => '<span>' + c + '</span>').join('');
+}
+
+function setFuse(f) { $('fuseFill').style.transform = 'scaleX(' + clamp(f, 0, 1) + ')'; }
+
+function renderLamps() {
+  const el = $('lamps');
+  el.innerHTML = '';
+  for (let i = 1; i <= cfg.maxWarn; i++) {
+    const d = document.createElement('div');
+    d.className = 'lamp' + (i <= S.warnings ? ' on' : '') + (i === cfg.maxWarn ? ' last' : '');
+    d.textContent = i + '.';
+    el.appendChild(d);
+  }
+  el.setAttribute('aria-label', S.warnings + ' von ' + cfg.maxWarn + ' Verwarnungen');
+}
+
+function renderMarks() {
+  const pl = pct(cfg.limit);
+  $('markLimit').style.left = pl + '%';
+  $('markWarn').style.left = pct(cfg.limit - YELLOW) + '%';
+  const lab = $('markLimitLabel');
+  lab.textContent = 'Grenze ' + cfg.limit + ' dB';
+  lab.style.transform = pl > 85 ? 'translateX(-100%)' : pl < 15 ? 'translateX(0)' : 'translateX(-50%)';
+}
+
+function renderRules() {
+  $('ruleLine').textContent = 'Verwarnung, wenn es ' + fmtS(cfg.tolerance) + ' lang zu laut ist · ' +
+    cfg.maxWarn + '. Verwarnung = ' + cfg.pauseMin + ' min Spielpause' +
+    (cfg.forgiveMin ? ' · nach ' + cfg.forgiveMin + ' ruhigen Minuten verfällt eine Verwarnung' : '');
+  const steps = [
+    ['calm', 'Grün:', 'Alles gut, spielt weiter.'],
+    ['warm', 'Gelb:', 'Es wird laut, etwas leiser.'],
+    ['hot', 'Rot', 'länger als ' + fmtS(cfg.tolerance) + ': Alarm und Verwarnung.'],
+    ['stop', cfg.maxWarn + '. Verwarnung:', 'Spielen verboten, ' + minutes(cfg.pauseMin) + ' Pause.']
+  ];
+  $('steps').innerHTML = '';
+  for (const [c, b, t] of steps) {
+    const li = document.createElement('li');
+    const dot = document.createElement('i'); dot.className = 'dot ' + c;
+    const strong = document.createElement('b'); strong.textContent = b;
+    li.append(dot, strong, ' ' + t);
+    $('steps').appendChild(li);
+  }
+}
+
+function renderTicks() {
+  const el = $('ticks');
+  for (let d = SCALE[0]; d <= SCALE[1]; d += 10) {
+    const s = document.createElement('span');
+    s.style.left = pct(d) + '%';
+    s.textContent = d;
+    el.appendChild(s);
+  }
+}
+
+function render(t, db) {
+  const zone = db >= cfg.limit ? 'over' : db >= cfg.limit - YELLOW ? 'loud' : 'ok';
+  if (app.dataset.zone !== zone) app.dataset.zone = zone;
+  $('meterFill').style.width = pct(db) + '%';
+  if (t - S.lastNum >= 0.2) {
+    S.lastNum = t;
+    setDigits(String(Math.round(db)));
+    if (S.settingsOpen) $('s_now').textContent = Math.round(db);
+  }
+  if (!S.pending && t > S.bubbleUntil && !S.ban) {
+    if (t < S.graceUntil) setBubble('Jetzt leiser werden', 'Ihr habt kurz Zeit, die Lautstärke runterzubringen.');
+    else setBubble(...ZONE_MSG[zone]);
+  }
+}
+
+/* ---------- Messen ---------- */
+
+function tick() {
+  const t = now();
+  const dt = Math.min(0.5, t - S.lastTick);
+  S.lastTick = t;
+
+  let ms;
+  if (S.demo) {
+    const d = S.simDb + (Math.random() * 2 - 1) * 1.5;
+    ms = Math.pow(10, (d - BASE - cfg.offset) / 10);
+  } else {
+    S.analyser.getFloatTimeDomainData(S.buf);
+    let mean = 0, sum = 0;
+    for (let i = 0; i < S.buf.length; i++) mean += S.buf[i];
+    mean /= S.buf.length;
+    for (let i = 0; i < S.buf.length; i++) { const x = S.buf[i] - mean; sum += x * x; }
+    ms = sum / S.buf.length;
+  }
+
+  // Während Alarm und Ansage nicht messen, sonst hört die Eule sich selbst.
+  if (S.pending || t < S.muteUntil) { S.power = 0; return; }
+  S.power = S.power ? S.power + (ms - S.power) * (1 - Math.exp(-dt / 0.4)) : ms;
+  const db = clamp(10 * Math.log10(S.power + 1e-12) + BASE + cfg.offset, 20, 130);
+  S.db = db;
+  render(t, db);
+
+  if (S.ban) banTick(t, dt, db);
+  else rules(t, dt, db);
+}
+
+function rules(t, dt, db) {
+  if (t < S.graceUntil) S.loud = Math.max(0, S.loud - dt);
+  else if (db >= cfg.limit) S.loud += dt;
+  else S.loud = Math.max(0, S.loud - dt * 0.5);
+  setFuse(S.loud / cfg.tolerance);
+
+  if (S.loud >= cfg.tolerance) return warn(t);
+
+  if (S.loud >= cfg.tolerance * 0.5 && t - S.lastHintAt > HINT_GAP) {
+    S.lastHintAt = t;
+    return announce({ kind: 'hint', title: 'Psst!', text: pick([
+      `Psst, ${A()}! Es wird ein bisschen laut.`,
+      `Etwas leiser bitte, ${A()}. Dann könnt ihr in Ruhe weiterspielen.`,
+      'Die Eule hört, dass es lauter wird. Ein bisschen leiser bitte.'
+    ]) });
+  }
+
+  if (S.warnings > 0 && cfg.forgiveMin > 0 && t - S.lastWarnAt > cfg.forgiveMin * 60) {
+    S.warnings--; S.lastWarnAt = t;
+    persist(); renderLamps();
+    return announce({ chime: true, title: 'Eine Verwarnung gelöscht',
+      text: `Super, ${A()}! Ihr wart ${minutes(cfg.forgiveMin)} lang schön leise. Eine Verwarnung ist gelöscht.` });
+  }
+
+  if (cfg.praise && S.warnings === 0 && S.loud < 0.2 && t - S.lastPraiseAt > PRAISE_GAP) {
+    S.lastPraiseAt = t;
+    announce({ chime: true, title: 'Super!', text: pick([
+      `Toll, ${A()}! Ihr spielt schön und gar nicht zu laut. Weiter so!`,
+      'Die Eule ist zufrieden. So leise und trotzdem so viel Spaß, super!'
+    ]) });
+  }
+}
+
+function warn(t) {
+  S.loud = 0; setFuse(0);
+  S.warnings++; S.lastWarnAt = t; S.lastPraiseAt = t;
+  persist(); renderLamps();
+  const k = S.warnings;
+  if (k >= cfg.maxWarn) return startBan();
+  const left = cfg.maxWarn - k;
+  const text = `Achtung, ${A()}! ${cap(ORD[k] || k + '.')} Verwarnung. Es ist zu laut. Spielt bitte leiser weiter. ` +
+    (left === 1 ? 'Bei der nächsten Verwarnung ist das Spielen vorbei.' : `Noch ${left} Verwarnungen, dann ist das Spielen vorbei.`);
+  announce({ alarm: true, flash: k + '.', title: k + '. Verwarnung', text, after: () => { S.graceUntil = now() + GRACE; } });
+}
+
+function startBan() {
+  const k = S.warnings;
+  S.ban = { left: cfg.pauseMin * 60, total: cfg.pauseMin * 60, half: cfg.pauseMin < 2 };
+  persist();
+  announce({
+    alarm: true, flash: k + '.', title: 'Spielen verboten',
+    text: `${cap(ORD[k] || k + '.')} Verwarnung! Stopp, ${A()}! Das Spielen ist jetzt verboten. Setzt euch bitte hin und seid leise. ` +
+      `Die Pause dauert ${minutes(cfg.pauseMin)}. Die Zeit läuft nur, wenn es ruhig ist.`,
+    before: showBan
+  });
+}
+
+function banTick(t, dt, db) {
+  const quiet = db < cfg.limit - YELLOW;
+  if (quiet) S.ban.left -= dt;
+  else if (t - S.lastStallAt > STALL_GAP) {
+    S.lastStallAt = t;
+    announce({ kind: 'hint', title: 'Pause steht still', text: 'Die Pause steht still, solange es laut ist. Erst wenn es leise ist, läuft die Zeit weiter.' });
+  }
+  renderBan(quiet);
+  if (!S.ban.half && S.ban.left <= S.ban.total / 2) {
+    S.ban.half = true;
+    announce({ title: 'Halbzeit', text: 'Die Hälfte der Pause ist geschafft. Weiter so leise!' });
+  }
+  if (S.ban.left <= 0) return endBan(false);
+  if (t - S.lastPersist > 5) { S.lastPersist = t; persist(); }
+}
+
+function renderBan(quiet) {
+  const b = S.ban;
+  if (!b) return;
+  const left = Math.max(0, Math.ceil(b.left));
+  const str = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+  if (str !== S.lastClock) {
+    S.lastClock = str;
+    $('banClock').innerHTML = [...str].map(c => c === ':' ? '<span class="c">:</span>' : '<span class="d">' + c + '</span>').join('');
+  }
+  $('banFill').style.transform = 'scaleX(' + clamp(1 - b.left / b.total, 0, 1) + ')';
+  const st = $('banState');
+  if (quiet == null) { st.className = 'ban-state idle'; st.textContent = 'Wartet auf Start'; }
+  else { st.className = 'ban-state' + (quiet ? '' : ' stalled'); st.textContent = quiet ? 'Die Zeit läuft' : 'Zu laut: die Zeit steht still'; }
+  $('banDb').textContent = S.db == null ? '--' : Math.round(S.db);
+}
+
+function showBan() { $('ban').hidden = false; renderBan(S.running ? true : null); }
+
+function endBan(byAdult) {
+  if (!S.ban) return;
+  S.ban = null; S.warnings = 0; S.loud = 0;
+  const t = now();
+  S.lastWarnAt = t; S.lastPraiseAt = t; S.graceUntil = t + 10;
+  persist(); renderLamps(); setFuse(0);
+  $('ban').hidden = true;
+  ensureAudio();
+  announce({ chime: true, title: 'Weiterspielen!', text: byAdult
+    ? `${A()}, ihr dürft wieder spielen. Viel Spaß!`
+    : `Die Pause ist vorbei, ${A()}! Ihr dürft wieder spielen. Viel Spaß, und denkt an die Lautstärke.` });
+}
+
+/* ---------- Ansagen und Töne ---------- */
+
+let chain = Promise.resolve();
+function announce(o) {
+  if (o.kind === 'hint' && S.pending) return;
+  S.pending++;
+  chain = chain.then(async () => {
+    try {
+      if (o.before) o.before();
+      setBubble(o.title, o.text);
+      if (o.flash) showFlash(o.flash, o.text);
+      if (o.alarm) await playAlarm();
+      else if (o.chime) await playChime();
+      await say(o.text);
+    } catch (e) {}
+    $('flash').hidden = true;
+    app.classList.remove('alarm');
+    if (o.after) o.after();
+    S.pending--;
+    S.bubbleUntil = now() + 6;
+    S.muteUntil = now() + 0.8;
+    S.power = 0;
+  });
+}
+
+function showFlash(num, text) {
+  $('flashNum').textContent = num;
+  $('flashText').textContent = text;
+  $('flash').hidden = false;
+  app.classList.add('alarm');
+}
+
+let voice = null;
+function pickVoice() {
+  if (!('speechSynthesis' in window)) return;
+  const vs = speechSynthesis.getVoices().filter(v => /^de([-_]|$)/i.test(v.lang));
+  voice = null;
+  for (const p of [/katja|seraphina|amala|florian|conrad/i, /google/i, /anna|petra|helena|hedda|markus/i]) {
+    voice = vs.find(v => p.test(v.name));
+    if (voice) break;
+  }
+  voice = voice || vs[0] || null;
+}
+if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+
+function say(text) {
+  if (!cfg.voice || !('speechSynthesis' in window)) return sleep(2200);
+  return new Promise(res => {
+    let done = false;
+    const fin = () => { if (!done) { done = true; res(); } };
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'de-DE';
+      if (voice) u.voice = voice;
+      u.rate = 0.95; u.pitch = 1.05; u.volume = 1;
+      u.onend = fin; u.onerror = fin;
+      setTimeout(() => speechSynthesis.speak(u), 60);
+      setTimeout(fin, 2500 + text.length * 85);
+    } catch (e) { fin(); }
+  });
+}
+
+function unlockSpeech() {
+  try {
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+function ensureAudio() {
+  if (!S.ctx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) S.ctx = new AC();
+  }
+  if (S.ctx && S.ctx.state !== 'running') S.ctx.resume().catch(() => {});
+}
+
+function playAlarm() {
+  if (!S.ctx || cfg.alarm === 'off') return sleep(1500);
+  return cfg.alarm === 'gong' ? playGong() : playSiren();
+}
+
+function playSiren() {
+  const ctx = S.ctx, t0 = ctx.currentTime + 0.03, dur = 3.2, vol = cfg.alarmVol;
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(0, t0);
+  out.gain.linearRampToValueAtTime(vol, t0 + 0.03);
+  out.gain.setValueAtTime(vol, t0 + dur - 0.08);
+  out.gain.linearRampToValueAtTime(0, t0 + dur);
+  const shaper = ctx.createWaveShaper();
+  const curve = new Float32Array(1024);
+  for (let i = 0; i < curve.length; i++) { const x = i / 511.5 - 1; curve[i] = Math.tanh(3 * x) / Math.tanh(3); }
+  shaper.curve = curve;
+  shaper.connect(out); out.connect(ctx.destination);
+  // Zwei leicht verstimmte Oszillatoren heulen zwischen 700 und 1600 Hz, dort sind Handy-Lautsprecher am lautesten.
+  for (const [type, g, f] of [['square', 0.55, 1], ['sawtooth', 0.45, 1.012]]) {
+    const o = ctx.createOscillator(), gn = ctx.createGain();
+    o.type = type; gn.gain.value = g;
+    o.connect(gn); gn.connect(shaper);
+    o.frequency.setValueAtTime(700 * f, t0);
+    for (let i = 1, t = t0 + 0.4; t <= t0 + dur; i++, t += 0.4) o.frequency.linearRampToValueAtTime((i % 2 ? 1600 : 700) * f, t);
+    o.start(t0); o.stop(t0 + dur + 0.05);
+  }
+  return sleep(dur * 1000 + 150);
+}
+
+function tone(freq, start, len, gain, type) {
+  const ctx = S.ctx, o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type || 'sine'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, start);
+  g.gain.linearRampToValueAtTime(gain, start + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, start + len);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(start); o.stop(start + len + 0.05);
+}
+
+function playGong() {
+  const t0 = S.ctx.currentTime + 0.03, v = cfg.alarmVol;
+  [[784, 0], [622, 0.7], [784, 1.4], [622, 2.1]].forEach(([f, d]) => {
+    tone(f, t0 + d, 1.4, 0.5 * v); tone(f * 2, t0 + d, 0.8, 0.18 * v); tone(f * 3, t0 + d, 0.4, 0.08 * v);
+  });
+  return sleep(3200);
+}
+
+function playChime() {
+  if (!S.ctx) return sleep(200);
+  const t0 = S.ctx.currentTime + 0.03, v = Math.min(0.6, cfg.alarmVol);
+  [523, 659, 784, 1047].forEach((f, i) => tone(f, t0 + i * 0.12, 0.5, 0.4 * v, 'triangle'));
+  return sleep(800);
+}
+
+/* ---------- Start und Stopp ---------- */
+
+async function startMic() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    const e = new Error('kein getUserMedia'); e.name = 'NotAllowedError'; throw e;
+  }
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  const src = S.ctx.createMediaStreamSource(stream);
+  const an = S.ctx.createAnalyser();
+  an.fftSize = 2048; an.smoothingTimeConstant = 0;
+  src.connect(an);
+  S.stream = stream; S.analyser = an; S.buf = new Float32Array(an.fftSize);
+}
+
+function micError(e) {
+  const el = $('micError'), name = (e && e.name) || '';
+  el.textContent = name === 'NotFoundError' || name === 'OverconstrainedError'
+    ? 'Es wurde kein Mikrofon gefunden. Ist eins angeschlossen und eingeschaltet?'
+    : name === 'NotReadableError'
+      ? 'Das Mikrofon wird gerade von einem anderen Programm benutzt, zum Beispiel Teams. Dort beenden und noch einmal tippen.'
+      : 'Der Browser lässt das Mikrofon hier nicht zu. Kam eine Frage, dann bitte „Zulassen“ wählen (sonst über das Schloss-Symbol neben der Adresse). In der Claude-Vorschau ist das Mikrofon immer gesperrt, dort geht nur der Probelauf.';
+  if (APP_URL) {
+    const a = document.createElement('a');
+    a.href = APP_URL; a.target = '_blank'; a.rel = 'noopener'; a.textContent = APP_URL;
+    el.append(' Mit Mikrofon läuft die App hier: ', a);
+  }
+  el.hidden = false;
+}
+
+async function start(demo) {
+  ensureAudio();
+  unlockSpeech();
+  $('micError').hidden = true;
+  S.demo = demo;
+  if (!demo) {
+    try { await startMic(); }
+    catch (e) { micError(e); return; }
+  }
+  const t = now();
+  S.running = true; S.power = 0; S.loud = 0;
+  S.lastTick = t; S.lastWarnAt = t; S.lastPraiseAt = t; S.graceUntil = t + 5;
+  S.timer = setInterval(tick, 100);
+  $('startOverlay').hidden = true;
+  $('demoRow').hidden = !demo;
+  $('btnStop').hidden = false;
+  requestWake();
+  if (S.ban) {
+    showBan();
+    announce({ title: 'Die Pause läuft noch', text: `${A()}, die Spielpause ist noch nicht vorbei. Die Zeit läuft, wenn es leise ist.` });
+  } else {
+    announce({ chime: true, title: `Hallo ${A()}!`, text: `Hallo ${A()}! Die Eule hört jetzt zu. Wenn die Zahl grün ist, ist alles gut. Viel Spaß beim Spielen!` });
+  }
+}
+
+function stop() {
+  clearInterval(S.timer); S.timer = null;
+  if (S.stream) S.stream.getTracks().forEach(tr => tr.stop());
+  S.stream = null; S.analyser = null; S.running = false; S.db = null;
+  try { speechSynthesis.cancel(); } catch (e) {}
+  if (S.wake) { S.wake.release().catch(() => {}); S.wake = null; }
+  persist();
+  app.dataset.zone = 'idle';
+  setDigits('--'); setFuse(0);
+  $('meterFill').style.width = '0';
+  setBubble(...ZONE_MSG.idle);
+  $('btnStop').hidden = true;
+  $('demoRow').hidden = true;
+  if (S.ban) renderBan(null);
+  showStart();
+}
+
+function showStart() {
+  const n = $('startNote');
+  if (S.ban) {
+    const l = Math.ceil(S.ban.left);
+    n.textContent = 'Es läuft noch eine Spielpause: ' + Math.floor(l / 60) + ':' + String(l % 60).padStart(2, '0') + ' Minuten übrig.';
+    n.hidden = false;
+  } else n.hidden = true;
+  $('startOverlay').hidden = false;
+}
+
+async function requestWake() {
+  try { if (navigator.wakeLock) S.wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && S.running) { requestWake(); ensureAudio(); }
+});
+
+/* ---------- Bedienung ---------- */
+
+function holdButton(btn, ms, fn) {
+  let timer = null;
+  btn.style.setProperty('--hold', ms + 'ms');
+  const cancel = () => { clearTimeout(timer); timer = null; btn.classList.remove('holding'); };
+  btn.addEventListener('pointerdown', e => {
+    if (e.button > 0) return;
+    btn.classList.add('holding');
+    timer = setTimeout(() => { cancel(); fn(); }, ms);
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => btn.addEventListener(ev, cancel));
+  btn.addEventListener('click', e => { if (e.detail === 0) fn(); });   // Tastatur
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+}
+
+$('btnStart').addEventListener('click', () => start(false));
+$('btnDemo').addEventListener('click', () => start(true));
+$('simDb').addEventListener('input', e => { S.simDb = +e.target.value; });
+holdButton($('btnStop'), 1000, stop);
+holdButton($('btnSettings'), 1000, openSettings);
+holdButton($('btnRelease'), 1500, () => endBan(true));
+
+if (document.fullscreenEnabled) {
+  $('btnFull').addEventListener('click', () => {
+    const p = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    if (p && p.catch) p.catch(() => {});
+  });
+} else $('btnFull').hidden = true;
+
+const FIELDS = [
+  ['limit', 's_limit', v => v + ' dB'],
+  ['tolerance', 's_tol', fmtS],
+  ['maxWarn', 's_max', v => String(v)],
+  ['pauseMin', 's_pause', v => v + ' min'],
+  ['forgiveMin', 's_forgive', v => v ? v + ' min' : 'nie'],
+  ['alarmVol', 's_vol', v => Math.round(v * 100) + ' %'],
+  ['offset', 's_offset', v => (v > 0 ? '+' : '') + v + ' dB']
+];
+
+function changed() {
+  store(KEY_CFG, cfg);
+  if (!S.ban) S.warnings = Math.min(S.warnings, cfg.maxWarn - 1);
+  renderLamps(); renderMarks(); renderRules();
+}
+
+for (const [key, id, fmt] of FIELDS) {
+  const inp = $(id), out = $(id + '_out');
+  inp.value = cfg[key];
+  out.textContent = fmt(cfg[key]);
+  inp.addEventListener('input', () => { cfg[key] = +inp.value; out.textContent = fmt(cfg[key]); changed(); });
+}
+$('s_alarm').value = cfg.alarm;
+$('s_alarm').addEventListener('change', e => { cfg.alarm = e.target.value; changed(); });
+for (const k of ['voice', 'praise']) {
+  const box = $('s_' + k);
+  box.checked = !!cfg[k];
+  box.addEventListener('change', () => { cfg[k] = box.checked; changed(); });
+}
+$('s_name').value = cfg.name;
+$('s_name').addEventListener('input', e => { cfg.name = e.target.value; changed(); });
+
+function openSettings() {
+  S.settingsOpen = true;
+  $('s_now').textContent = S.db == null ? '--' : Math.round(S.db);
+  $('settings').hidden = false;
+}
+function closeSettings() { S.settingsOpen = false; $('settings').hidden = true; }
+$('setForm').addEventListener('submit', e => { e.preventDefault(); closeSettings(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.settingsOpen) closeSettings(); });
+
+$('t_alarm').addEventListener('click', () => {
+  ensureAudio(); unlockSpeech();
+  announce({ alarm: true, flash: '!', title: 'Alarm-Test', text: 'Das war nur ein Test. Alles gut!' });
+});
+$('t_voice').addEventListener('click', () => {
+  ensureAudio(); unlockSpeech();
+  announce({ chime: true, title: 'Ansage-Test', text: `Hallo ${A()}! So klingt die Eule, wenn sie etwas sagt.` });
+});
+$('t_reset').addEventListener('click', () => {
+  S.warnings = 0; S.loud = 0; S.lastWarnAt = now(); setFuse(0);
+  persist(); renderLamps();
+  if (S.ban) endBan(true);
+});
+
+/* ---------- Los ---------- */
+
+renderTicks(); renderMarks(); renderLamps(); renderRules();
+if (S.ban) showBan();
+showStart();
+})();
+</script>
